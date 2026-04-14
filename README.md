@@ -23,6 +23,26 @@ That's the whole API. The router learns which provider wins per context, *per co
 
 ---
 
+## 🔥 rl-router is a powerful tool
+
+rl-router gives you adaptive LLM provider routing via contextual Thompson Sampling bandits with zero config, zero dependencies, sub-millisecond decisions.
+
+**What it can do:**
+- Learn optimal provider per task context from live feedback
+- Survive rate limits, quota resets, and latency drift automatically
+- Scale across parallel workers without synchronizing onto the same provider
+
+**With great power comes responsibility.** This tool can route production LLM traffic across providers — when misconfigured, it can also cause cost spikes or reliability incidents if arms/rewards are misconfigured. Read the [Disclaimer](DISCLAIMER.md) before deploying to production. You are solely responsible for your use.
+
+**Recommended for:**
+- Production LLM pipelines running on multiple providers (OpenAI + Anthropic + local, etc.)
+- Batch inference jobs with parallel workers needing adaptive routing
+
+**NOT recommended for:**
+- Life-critical, safety-critical, or mission-critical systems
+- Regulatory environments requiring formal validation (medical, aerospace, SIL)
+- Any use that would violate third-party terms of service
+
 ## Why not just try-catch a provider list?
 
 Hand-written fallback logic fails silently in three common ways:
@@ -43,6 +63,14 @@ pip install rl-router
 ```
 
 No dependencies. Python 3.9+. Works on Linux, macOS, Windows.
+
+## ⚠️ Disclaimer
+
+rl-router is provided **AS IS**, without warranty of any kind. Use at
+your own risk. You are solely responsible for your use and for compliance
+with all applicable laws and third-party terms of service.
+
+See [DISCLAIMER.md](DISCLAIMER.md) for full terms.
 
 ## Core concepts (30 seconds)
 
