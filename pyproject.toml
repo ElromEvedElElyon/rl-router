@@ -1,0 +1,44 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "rl-router"
+version = "0.1.0"
+description = "Contextual Thompson Sampling router for multi-provider LLM APIs. Zero config, adaptive to rate limits and quotas."
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.9"
+authors = [{name = "ElromEvedElElyon"}]
+keywords = ["llm", "routing", "bandit", "thompson-sampling", "reinforcement-learning", "openai", "anthropic", "rate-limit"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=7", "pytest-cov", "ruff"]
+
+[project.urls]
+Homepage = "https://github.com/ElromEvedElElyon/rl-router"
+Issues = "https://github.com/ElromEvedElElyon/rl-router/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/rl_router"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py39"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
