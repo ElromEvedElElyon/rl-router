@@ -188,3 +188,42 @@ def test_priors_only_seed_missing_contexts(tmp_state: Path) -> None:
     bucket = r.state["ctx"]["ctx"]["claude_cli"]
     # a stays near its decayed seed; b grows with failures.
     assert bucket["b"] > bucket["a"]
+
+
+# ---------------------------------------------------------------------------
+# Kill-switch: CLAUDE_CLI_DISABLED=1 forces the arm offline without editing
+# code or removing the claude binary.
+# ---------------------------------------------------------------------------
+
+
+def test_kill_switch_env_var_marks_unavailable(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("CLAUDE_CLI_DISABLED", "1")
+    p = ClaudeCLIProvider(binary="/usr/bin/claude")
+    assert p.is_available() is False
+
+
+def test_kill_switch_short_circuits_call(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("CLAUDE_CLI_DISABLED", "1")
+
+    called = {"ran": False}
+
+    def tripwire(cmd, timeout):
+        called["ran"] = True
+        return _completed(0, "never")
+
+    p = ClaudeCLIProvider(binary="/usr/bin/claude")
+    monkeypatch.setattr(p, "_run", tripwire)
+
+    res = p.call("ping")
+    assert res.success is False
+    assert called["ran"] is False
+    assert "CLAUDE_CLI_DISABLED" in res.stderr
+
+
+def test_kill_switch_empty_value_does_not_disable(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("CLAUDE_CLI_DISABLED", "")
+    p = ClaudeCLIProvider(binary="/usr/bin/claude")
+    # Empty value is treated as unset (consistent with shell convention).
+    monkeypatch.setattr(p, "_run", lambda cmd, timeout: _completed(0, "ok"))
+    res = p.call("ping")
+    assert res.success is True

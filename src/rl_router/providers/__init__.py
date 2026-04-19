@@ -6,5 +6,11 @@ identifiers), so providers can be wired in freely by user code.
 """
 
 from .claude_cli import ClaudeCLIProvider, ClaudeCLIResult
+from .nvidia_build import NvidiaBuildProvider, NvidiaBuildResult
 
-__all__ = ["ClaudeCLIProvider", "ClaudeCLIResult"]
+__all__ = [
+    "ClaudeCLIProvider",
+    "ClaudeCLIResult",
+    "NvidiaBuildProvider",
+    "NvidiaBuildResult",
+]

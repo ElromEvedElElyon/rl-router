@@ -11,6 +11,14 @@ Why a subprocess and not the Anthropic HTTP API?
     **not** fall back to the HTTP API on failure — that is the RL Router's
     job (other arms pick up the slack).
 
+Kill-switch
+    When ``CLAUDE_CLI_DISABLED=1`` (or any non-empty value) is set in the
+    process environment, :meth:`is_available` returns False and :meth:`call`
+    returns an immediate failed result without launching a subprocess. This
+    lets operators force the Router onto alternate arms during a Claude.ai
+    subscription outage (or while rotating the subscription) without editing
+    code or removing the binary.
+
 The provider is designed to plug into :class:`rl_router.Router`:
 
     >>> from rl_router import Router
@@ -27,11 +35,21 @@ The provider is designed to plug into :class:`rl_router.Router`:
 
 from __future__ import annotations
 
+import os
 import shutil
 import subprocess
 import time
 from dataclasses import dataclass
 from typing import Optional, Sequence
+
+
+# Environment variable that, when set to a non-empty value, forces the
+# ClaudeCLIProvider into an unavailable / fail-fast state. Documented above.
+DISABLED_ENV_VAR = "CLAUDE_CLI_DISABLED"
+
+
+def _is_disabled() -> bool:
+    return bool(os.environ.get(DISABLED_ENV_VAR, "").strip())
 
 
 @dataclass
@@ -98,9 +116,19 @@ class ClaudeCLIProvider:
         """Run the CLI once with ``prompt`` and return the outcome.
 
         Never raises for backend failures; exit-code / timeout / missing
-        binary all surface as ``success=False`` results so the RL Router
-        can penalise the arm without a try/except wrapper at the call site.
+        binary / kill-switch all surface as ``success=False`` results so the
+        RL Router can penalise the arm without a try/except wrapper at the
+        call site.
         """
+        if _is_disabled():
+            return ClaudeCLIResult(
+                success=False,
+                output="",
+                latency_s=0.0,
+                return_code=-1,
+                stderr=f"{DISABLED_ENV_VAR}=1 — Claude CLI arm disabled by operator",
+                timed_out=False,
+            )
         cmd: list[str] = [self.binary, "-p", *self.extra_args, prompt]
         t0 = time.monotonic()
         try:
@@ -149,5 +177,8 @@ class ClaudeCLIProvider:
         )
 
     def is_available(self) -> bool:
-        """True iff a ``claude`` binary can be located on PATH."""
+        """True iff a ``claude`` binary can be located on PATH and the
+        kill-switch env var is not set."""
+        if _is_disabled():
+            return False
         return shutil.which(self.binary) is not None or shutil.which("claude") is not None
