@@ -42,3 +42,7 @@ target-version = "py39"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = [
+  "integration: hits live external APIs; requires NVIDIA_API_KEY or similar",
+]
+addopts = "-m 'not integration'"
