@@ -17,7 +17,7 @@ import tempfile
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Hashable, Iterable
+from typing import Hashable, Iterable, Mapping, Optional, Tuple
 
 # Portable file locking: fcntl on POSIX, msvcrt on Windows.
 if sys.platform == "win32":
@@ -78,6 +78,12 @@ class Router:
         ...          success=True, latency_s=0.8)
 
     Thread/process-safe via atomic file replace + shared file lock on load.
+
+    Optional ``priors`` seed the initial Beta(a, b) for specific arms. This
+    lets you encode strong preferences — e.g. a flat-rate CLI provider that
+    should be tried first — without modifying the Thompson Sampling update.
+    Only used when initialising a context bucket for the first time; once
+    evidence accumulates, learned posteriors dominate the prior.
     """
 
     def __init__(
@@ -85,12 +91,22 @@ class Router:
         arms: Iterable[str],
         state_path: str | Path | None = None,
         config: RouterConfig | None = None,
+        priors: Optional[Mapping[str, Tuple[float, float]]] = None,
     ):
         self.arms = list(arms)
         if not self.arms:
             raise ValueError("arms must not be empty")
         self.state_path = Path(state_path) if state_path else DEFAULT_STATE_PATH
         self.config = config or RouterConfig()
+        # Seed values (a, b) applied when a new (context, arm) bucket is
+        # first created. Defaults to (1.0, 1.0) = uniform prior.
+        self.priors: dict[str, Tuple[float, float]] = dict(priors or {})
+        for arm, ab in self.priors.items():
+            if arm not in self.arms:
+                raise ValueError(f"prior references unknown arm: {arm!r}")
+            a, b = ab
+            if a < 1.0 or b < 1.0:
+                raise ValueError(f"prior ({arm}): a and b must be >= 1.0, got {ab!r}")
         self.state: dict = self._load()
 
     def _load(self) -> dict:
@@ -139,9 +155,17 @@ class Router:
     def _bucket(self, ck: str) -> dict:
         b = self.state["ctx"].setdefault(ck, {})
         for arm in self.arms:
+            seed_a, seed_b = self.priors.get(arm, (1.0, 1.0))
             b.setdefault(
                 arm,
-                {"a": 1.0, "b": 1.0, "n": 0, "lat_ewma": 0.0, "last": 0.0, "last_rl": 0.0},
+                {
+                    "a": float(seed_a),
+                    "b": float(seed_b),
+                    "n": 0,
+                    "lat_ewma": 0.0,
+                    "last": 0.0,
+                    "last_rl": 0.0,
+                },
             )
         return b
 

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "rl-router"
-version = "0.1.0"
+version = "0.2.0"
 description = "Contextual Thompson Sampling router for multi-provider LLM APIs. Zero config, adaptive to rate limits and quotas."
 readme = "README.md"
 license = "MIT"
